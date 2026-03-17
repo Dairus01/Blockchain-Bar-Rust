@@ -19,20 +19,26 @@ pub fn new_state_from_disk() -> Result<State, std::io::Error> {
     println!("The current direcory is {:?}", &cwd);
 
     // get genesis.json file path and join to the current working directory
-    let gen_file_path = cwd.join("rust_blockchain/database/logs/genesis.json");
+    let gen_file_path = cwd.join("database/logs/genesis.json");
     let gen_content = fs::read_to_string(&gen_file_path)?;
-    let _genesis = load_genesis(&gen_content)?;
+    let genesis = load_genesis(&gen_content)?;
 
     // get tx data base file path
-    let tx_db_file_path = cwd.join("rust_blockchain/database/logs/tx.db");
+    let tx_db_file_path = cwd.join("database/logs/tx.db");
     let tx_file = File::open(&tx_db_file_path)?;
     let tx_reader = BufReader::new(&tx_file);
     // let tx: Tx = serde_json::from_reader(&mut tx_reader)?;
-    let db_file = File::open(&tx_db_file_path).ok(); // Reopen for db_file
+    let db_file = fs::OpenOptions::new().append(true).create(true).open(&tx_db_file_path).ok();
+
+    // Seed state balances from genesis (convert String keys to UserAccount)
+    let mut initial_balances: HashMap<UserAccount, u64> = HashMap::new();
+    for (name, balance) in genesis.balances {
+        initial_balances.insert(UserAccount::from_name(&name, balance), balance);
+    }
 
     // create empty mutable state within the function
     let mut state = State{
-        balances: HashMap::new(),
+        balances: initial_balances,
         tx_mempool: vec![],
         db_file
     };

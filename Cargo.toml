@@ -7,6 +7,10 @@ edition = "2024"
 name = "rust_blockchain"
 path = "src/lib.rs"
 
+[[bin]]
+name = "rust_blockchain"
+path = "src/main.rs"
+
 [dependencies]
 clap = { version = "4.5.47", features = ["derive"] }
 serde = {version = "1.0.219" , features = ["derive"]}
