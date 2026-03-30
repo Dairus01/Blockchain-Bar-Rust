@@ -35,12 +35,24 @@ A minimal Rust-based blockchain state manager with transaction mempool and persi
 
 ## CLI
 
-Uses `clap` v4 with derive macros. Currently defines argument structure but subcommands are incomplete (`Commands` enum exists but has no variants defined).
+Uses `clap` v4 with derive macros. Exposes two subcommands via the `Commands` enum.
 
 Arguments:
 - `name`: Optional positional argument
 - `-c, --config <FILE>`: Custom config file path
-- `-d, --debug`: Debug flag (can be repeated)
+- `-d, --debug`: Debug verbosity flag (repeatable, e.g. `-ddd`)
+
+Subcommands:
+- `balances` — Print current account balances from state
+- `tx` — Add a new transaction to the mempool
+
+## Balances
+
+`src/balances.rs` exposes `State::get_balance(account) -> u64`, returning the current balance for a given `UserAccount` (or `0` if not found).
+
+## Genesis Seeding
+
+On startup, `new_state_from_disk()` loads `database/logs/genesis.json`, converts each named account into a `UserAccount` via `UserAccount::from_name()`, and seeds the in-memory balance map before replaying the transaction log.
 
 ## Dependencies
 
@@ -54,19 +66,25 @@ thiserror = "2.0.16"
 ## File Structure
 
 ```
-database/logs/
-  genesis.json    # Initial state definition
-  tx.db           # Append-only transaction log (JSON lines)
+database/
+  logs/
+    genesis.json    # Initial account balances
+    tx.db           # Append-only transaction log (JSON lines)
+  state.json        # Latest persisted state snapshot
+src/
+  main.rs           # CLI entrypoint (clap)
+  lib.rs            # Module declarations
+  state.rs          # State struct, mempool, persistence
+  genesis.rs        # Genesis JSON deserialisation
+  balances.rs       # get_balance helper
+  utils.rs          # apply() and is_reward() logic
+  tx.rs             # Tx struct
+  user.rs           # UserAccount struct + from_name constructor
+  error.rs          # MempoolError enum
+tests/
+  test.rs           # Integration tests
 ```
 
 ## Tests
 
-Integration tests in `tests/test.rs` (currently commented out). Tests genesis deserialization and state loading.
-
-## Known Issues
-
-- `main.rs` line 26 references `cli.count` which does not exist (likely meant `cli.debug`)
-- `src/balances.rs` is empty
-- `database/state.json` is empty
-- `src/main.rs` line 22 has dangling `enum` declaration
-- Path construction in `new_state_from_disk()` hardcodes `rust_blockchain/database/logs` which may not match actual directory structure
+Integration tests in `tests/test.rs`. Covers genesis deserialisation and state loading from disk.
